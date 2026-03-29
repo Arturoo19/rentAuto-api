@@ -2,12 +2,15 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Car } from './car.entity';
 import { Repository } from 'typeorm';
+import { Rental } from 'src/rentals/rental.entity';
 
 @Injectable()
 export class CarsService {
   constructor(
     @InjectRepository(Car)
     private carsRepo: Repository<Car>,
+    @InjectRepository(Rental)
+    private rentalsRepo: Repository<Rental>,
   ) {}
 
   findAll() {
@@ -35,5 +38,43 @@ export class CarsService {
     await this.findOne(id);
     await this.carsRepo.delete(id);
     return { message: 'Coche eliminado' };
+  }
+  async findAvailable(startDate: string, endDate: string) {
+    const rentedCars = await this.rentalsRepo
+      .createQueryBuilder('rental')
+      .select('rental.carId', 'carId') // ← виправлено
+      .where('rental.status != :cancelled', { cancelled: 'cancelled' })
+      .andWhere('rental.startDate < :endDate', { endDate })
+      .andWhere('rental.endDate > :startDate', { startDate })
+      .getRawMany();
+
+    const rentedCarIds = rentedCars
+      .map((r: any) => Number(r.carId))
+      .filter((id: number) => !isNaN(id));
+
+    console.log('Rented car IDs:', rentedCarIds);
+
+    if (rentedCarIds.length === 0) {
+      return this.carsRepo.find();
+    }
+
+    return this.carsRepo
+      .createQueryBuilder('car')
+      .where('car.id NOT IN (:...ids)', { ids: rentedCarIds })
+      .getMany();
+  }
+  async getBookedDates(carId: number) {
+    const rentals = await this.rentalsRepo.find({
+      where: {
+        car: { id: carId },
+        status: 'active',
+      },
+      relations: ['car'],
+    });
+
+    return rentals.map((r) => ({
+      startDate: r.startDate,
+      endDate: r.endDate,
+    }));
   }
 }

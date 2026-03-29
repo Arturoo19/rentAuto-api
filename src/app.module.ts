@@ -7,6 +7,7 @@ import { UsersModule } from './users/users.module';
 import { CarsModule } from './cars/cars.module';
 import { RentalsModule } from './rentals/rentals.module';
 import { AuthModule } from './auth/auth.module';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
@@ -25,6 +26,8 @@ import { AuthModule } from './auth/auth.module';
     CarsModule,
     RentalsModule,
     AuthModule,
+    PaymentsModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
